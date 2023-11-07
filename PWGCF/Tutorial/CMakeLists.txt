@@ -38,3 +38,8 @@ o2physics_add_dpl_workflow(cf-tutorial-5
                     SOURCES CFTutorialTask5.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
                     COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(nfm-moments
+                    SOURCES nfMomentsTask.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
+                    COMPONENT_NAME Analysis)
