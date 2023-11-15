@@ -6,6 +6,7 @@
 #include "Common/DataModel/Centrality.h"
 #include <iostream>
 #include <THashList.h>
+#include <TH1F.h>
 #include <array>
 
 using std::array;
@@ -35,12 +36,14 @@ DECLARE_SOA_TABLE(nfmFULL, "AOD", "nfmFULL", full::mEvMult, full::mCollID, full:
 // Write information to the tree
 struct AnalysisExec {
   Produces<o2::aod::nfmFULL> eventsel;
-  OutputObj<THashList> fOutputList{"eventStandard"};
+  THashList* mList = new THashList();
 
   Configurable<float> mcentralEta{"centralEta", 0.8, "eta limit for central tracks"};
   Configurable<float> mvertexZ{"vertexZ", 10, "z vertex limit"};
   Configurable<std::vector<float>> mpTbins{"ptCuts", {0.4f, 1.0f, 0.4f, 0.6f, 0.8f, 1.0f, 0.4f, 2.0f, 0.4f, 5.0f}, "pT cuts"};
   Configurable<int> mnumPt{"numPt", 5, "number of pT bins"};
+  // max number of bins restricted to 5
+  static constexpr std::array<std::string_view, 5> mbinNames{"bin1/", "bin2/", "bin3/", "bin4/", "bin5/"};
 
   Filter etaTracks = nabs(aod::track::eta) < mcentralEta;
   // Filter centEvents = aod::cent::FV0A > 0 && aod::cent::FV0A < 100;
@@ -66,6 +69,7 @@ struct AnalysisExec {
   array<int, 40> mbinsscale;
   std::vector<std::shared_ptr<TH2>> histArrR;
   std::vector<std::shared_ptr<TH2>> histArrUR;
+  std::vector<std::shared_ptr<TH1>> histArrQA;
 
   void init(o2::framework::InitContext&)
   {
@@ -73,9 +77,9 @@ struct AnalysisExec {
       mbinsscale[iM] = 2 * (iM + 2);
     }
     for (auto iPt = 0; iPt < mnumPt; ++iPt) {
-      histos.add(Form("bin%i/eta", iPt + 1), "#eta distribution;#eta;", HistType::kTH1F, {{1000, -2, 2}});
-      histos.add(Form("bin%i/pT", iPt + 1), "#p_{T} distribution;#p_{T};", HistType::kTH1F, {{1000, -0.01, 50}});
-      histos.add(Form("bin%i/phi", iPt + 1), "#phi distribution;#phi;", HistType::kTH1F, {{1000, 0, 2 * TMath::Pi()}});
+      histArrQA.push_back(std::get<std::shared_ptr<TH1>>(histos.add(Form("bin%i/eta", iPt + 1), Form("#eta for bin%i;#eta", iPt + 1), HistType::kTH1F, {{1000, -2, 2}})));
+      histArrQA.push_back(std::get<std::shared_ptr<TH1>>(histos.add(Form("bin%i/pT", iPt + 1), Form("pT for bin%i;pT", iPt + 1), HistType::kTH1F, {{1000, -0.01, 50}})));
+      histArrQA.push_back(std::get<std::shared_ptr<TH1>>(histos.add(Form("bin%i/phi", iPt + 1), Form("#phi for bin%i;#phi", iPt + 1), HistType::kTH1F, {{1000, -TMath::Pi(), TMath::Pi()}})));
       for (auto iM = 0; iM < 40; ++iM) {
         auto mHistsR = std::get<std::shared_ptr<TH2>>(histos.add(Form("bin%i/Reset/hetaphi%i", iPt + 1, iM), Form("#eta#phi_%i for bin%i;#eta;#phi", iM, iPt + 1), HistType::kTH2F, {{mbinsscale[iM], -0.8, 0.8}, {mbinsscale[iM], 0, 2 * TMath::Pi()}}));
         histArrR.push_back(mHistsR);
@@ -90,9 +94,9 @@ struct AnalysisExec {
   {
     for (auto iPt = 0; iPt < mnumPt; ++iPt) {
       if (track.pt() > mpTbins.value[2 * iPt] && track.pt() < mpTbins.value[2 * iPt + 1]) {
-        histos.fill(HIST(Form("bin%i/eta", iPt + 1)), track.eta());
-        histos.fill(HIST(Form("bin%i/pT", iPt + 1)), track.pt());
-        histos.fill(HIST(Form("bin%i/phi", iPt + 1)), track.phi());
+        histArrQA[iPt * 3]->Fill(track.eta());
+        histArrQA[iPt * 3 + 1]->Fill(track.pt());
+        histArrQA[iPt * 3 + 2]->Fill(track.phi());
         for (auto iM = 0; iM < 40; ++iM) {
           histArrR[iPt * 40 + iM]->Fill(track.eta(), track.phi());
           histArrUR[iPt * 40 + iM]->Fill(track.eta(), track.phi());
