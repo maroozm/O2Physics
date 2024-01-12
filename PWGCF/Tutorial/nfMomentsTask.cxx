@@ -62,9 +62,14 @@ struct AnalysisExec {
       {"vertexZ", "vertexZ", {HistType::kTH1F, {{100, -10, 10}}}},
       {"eta", "#eta", {HistType::kTH1F, {{1000, -2, 2}}}},
       {"pT", "#pt", {HistType::kTH1F, {{1000, -0.01, 50}}}},
+      {"events", "events", {HistType::kTH1D, {{5, -0.5, 4.5}}}},
     },
     OutputObjHandlingPolicy::AnalysisObject,
     true};
+  auto histEvents = std::get<std::shared_ptr<TH1>>(histos.get("events"));
+  histEvents->GetXaxis()->SetBinLabel(1, "all");
+  histEvents->GetXaxis()->SetBinLabel(2, "cent");
+  histEvents->GetXaxis()->SetBinLabel(3, "vertex");
 
   array<int, 40> mbinsscale;
   std::vector<std::shared_ptr<TH2>> histArrR;
